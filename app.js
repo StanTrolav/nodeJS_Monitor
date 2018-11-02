@@ -24,14 +24,23 @@ var servicePort = 8083;         //Порт по которому сервис б
 
 //Глобальные переменные
 var serviceExecutionsCount = 0;
-var serviceInterval = 10 *1000;    //Интервал выполнения функции в милисекундах. Если установить 60000, то функция будет запускаться каждую минуту.
+var serviceInterval = 30 * 1000;    //Интервал выполнения функции в милисекундах. Если установить 60000, то функция будет запускаться каждую минуту.
 
 urlsArray = [
-'http://sbt-ouiefs-0105.sigma.sbrf.ru/hub/11',
-'http://zakupki.gov.ru/epz/ktru/quicksearch/search.html',
-'http://ya.ru',
+'https://sbt-ouiefs-0105.sigma.sbrf.ru/',
+//ИФТ Sense
+'https://str-vst-isam-sudir-1-usr.sigma.sbrf.ru/fd-qliksense/x/',
+'https://sbt-gas-0011.sigma.sbrf.ru/',
+//ПСИ Sense
+'https://sudirsppsi.sigma.sbrf.ru/fd-qliksense/x/',
+'https://tv-qlik-12r2-15.sigma.sbrf.ru/',
+//ПРОМ Sense
+'https://sudirsp.sigma.sbrf.ru/fd-qliksense/x/',
+'https://v-qlik-12r2-37.sigma.sbrf.ru/',
+//Тестовые записи
 'http://NOSUCHPAGE.org',
-'http://localhost:8083/'
+'http://localhost:8083/',
+'http://google.com/'
 ]
 
 //Постоянное Оперативное хранилище
@@ -44,7 +53,11 @@ function getHTTP(url, callback){
     //console.log('getHTTP: ' + url);
     var options = {
         method:'GET',
-        url: url
+        url: url,
+        agentOptions: {
+            rejectUnauthorized: false //Убираем ошибку типа UNABLE_TO_GET_ISSUER_CERT_LOCALLY для перехода в https
+        },
+        //imeout: 5000
     };
     request(options,  
         function (err, response) {
@@ -73,10 +86,12 @@ function getHTTP(url, callback){
                 //console.log(err) //полный текст ошибки
                 if(!JSON.stringify(err).split('code: ')){
                     m_targetStatusCode = 'ERR'
+                    answerDtl = "this URL is black hole without error code"
                 } else{
                     m_targetStatusCode = 'ERR'
                     answerDtl = JSON.parse(JSON.stringify(err).split('code: ').toString()).code;
-
+                    answerDtl = answerDtl + ' ' + JSON.parse(JSON.stringify(err).split('address: ').toString()).address;
+                    answerDtl = answerDtl + ' ' + JSON.parse(JSON.stringify(err).split('port: ').toString()).port;
                 }
             };
 
@@ -186,6 +201,7 @@ function comandsExecutor () {
                     //monitorStorage = Object.assign({}, monitorStorage);
                     serviceStatus = 'WATING'
                     //console.log('All comands processed...')
+                    log('Processed ' + comandsCount + ' comands. Waiting next execution.', 'NodeJS_Monitor_', true, 'INFO', true);
                 }
             }
         )
@@ -244,7 +260,12 @@ var app = express();
                                     //console.log(monitorStorage[i])
                                         displayUrl = monitorStorage[i].url,
                                         displaySta = monitorStorage[i].status;
-                                    urlStats = urlStats +  '\n' + displaySta + ' : ' + displayUrl
+                                        displayStaD = monitorStorage[i].statusDtl;
+                                        if(displaySta != 'ERR') {
+                                            urlStats = urlStats +  '\n' + displaySta + ' : ' + displayUrl;
+                                        } else {
+                                            urlStats = urlStats +  '\n' + displaySta + ' : ' + displayUrl + '\n' + displayStaD;
+                                        }
                                     //console.log(urlStats)
                                     }
 
